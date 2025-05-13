@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny
 from .serializers import RegisterSerializer, LoginSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
+from canteen.models import User
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
@@ -84,15 +85,12 @@ def reset_password(request, uid, token):
 
     if not default_token_generator.check_token(user, token):
         return Response({'error': 'Token expired or invalid'}, status=400)
-
-    
     new_password = request.data.get('password')
+
     if not new_password:
         return Response({'error': 'New password is required'}, status=400)
-
     user.set_password(new_password)
     user.save()
-
     return Response({'message': 'Password reset successful'})
 
 
@@ -103,7 +101,7 @@ from rest_framework.permissions import IsAuthenticated
 from .permissions import IsCanteenAdmin
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin])
+@permission_classes([IsAuthenticated,IsCanteenAdmin])
 def create_menu(request):
 
     serializer = MenuSerializer(data=request.data)
@@ -116,12 +114,12 @@ def create_menu(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsCanteenAdmin])
 def list_menus(request):
+    print("User:", request.user.username)
+    print("User Role:", request.user.role)
 
     menus = menu.objects.all()
     serializer = MenuSerializer(menus, many=True)
     return Response(serializer.data)
-
-
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated, IsCanteenAdmin])
@@ -134,7 +132,8 @@ def update_menu(request, menu_id):
     serializer = MenuSerializer(menu_instance, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data)
+        return Response({'message': 'Menu updated successfully','updateded': serializer.data
+        }, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=400)
 
 @api_view(['DELETE'])
