@@ -21,7 +21,7 @@ def register_user(request):
 def login_user(request):
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.validated_data
+        user = serializer.validated_data  
         refresh = RefreshToken.for_user(user)
         return Response({
             'refresh': str(refresh),
@@ -46,20 +46,19 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 
-
-
-
-
 User = get_user_model()
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  
 def request_reset_email(request):
     email = request.data.get('email')
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
+    users = User.objects.filter(email=email)
+
+    if not users.exists():
         return Response({'error': 'User not found'}, status=404)
+
+    # You can loop through users if duplicates are allowed, but we'll use the first one for now
+    user = users.first()
 
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
@@ -73,6 +72,8 @@ def request_reset_email(request):
     )
 
     return Response({"message": "Password reset link sent."})
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  
@@ -172,28 +173,36 @@ def submit_vote(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])  
+@permission_classes([IsAuthenticated , IsCanteenAdmin])
 def check_votes(request):
-    # Check for the 'date' parameter in query params
-    date_str = request.GET.get('date')
-
-    # If the date isn't in query params, try to get it from the request body
-    if not date_str:
-        date_str = request.data.get('date')
-
-    if not date_str:
-        return Response({'error': 'Date is required'}, status=400)
+    # Get date filters from query parameters
+    date = request.GET.get('date')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
 
     try:
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        if date:
+            # Filter by specific date
+            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+            menu_obj = menu.objects.filter(date=date_obj).first()
+            if not menu_obj:
+                return Response({'error': 'No menu found for that date'}, status=404)
+            votes = Vote.objects.filter(user=request.user, menu=menu_obj)
+
+        elif start_date and end_date:
+            # Filter by custom date range
+            start = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end = datetime.strptime(end_date, '%Y-%m-%d').date()
+            menu_objs = menu.objects.filter(date__range=(start, end))
+            votes = Vote.objects.filter(user=request.user, menu__in=menu_objs)
+
+        else:
+            # Get all votes by user
+            votes = Vote.objects.filter(user=request.user)
+
     except ValueError:
         return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
 
-    menu_obj = menu.objects.filter(date=date_obj).first()
-    if not menu_obj:
-        return Response({'error': 'No menu found for that date'}, status=404)
-
-    votes = Vote.objects.filter(user=request.user, menu=menu_obj)
     serializer = VoteSerializer(votes, many=True)
     return Response(serializer.data)
 
