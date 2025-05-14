@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .serializers import RegisterSerializer, LoginSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated
 from canteen.models import User
 
@@ -17,27 +17,40 @@ def register_user(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  
+@permission_classes([AllowAny])
 def login_user(request):
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.validated_data  
+        user = serializer.validated_data 
         refresh = RefreshToken.for_user(user)
+
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'username': user.username,
+            'role': user.get_role_display(),
         }, status=status.HTTP_200_OK)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  
+@permission_classes([IsAuthenticated])
 def logout_user(request):
     try:
-        request.user.auth_token.delete()
-    except:
-        pass
-    return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
-
+        # Get the refresh token from the request data
+        refresh_token = request.data["Enter your refresh token"]
+        
+        # Blacklist the refresh token
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        
+        # Successfully logged out
+        return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 ##this is fro forgot password 
 from django.contrib.auth.tokens import default_token_generator

@@ -3,7 +3,7 @@ from .views import register_user, login_user, logout_user , request_reset_email,
 
 urlpatterns = [
     path('', register_user, name='register'),
-    path('login/', login_user, name='login'),
+    path('login/', login_user, name='login_user'),
     path('logout/', logout_user, name='logout'),
     path('password-reset/', request_reset_email, name='password-reset'),
     path('reset-password/<uid>/<token>/', reset_password, name='reset-password'),
