@@ -6,6 +6,20 @@ from .serializers import RegisterSerializer, LoginSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework.permissions import IsAuthenticated
 from canteen.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.contrib.auth import get_user_model
+from .models import menu
+from .serializers import MenuSerializer
+from rest_framework.permissions import IsAuthenticated
+from .permissions import IsCanteenAdmin
+from datetime import datetime, date
+import pandas as pd
+from django.http import HttpResponse
+from io import BytesIO
+from reportlab.pdfgen import canvas
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
@@ -34,7 +48,7 @@ def login_user(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+from django.contrib.auth import logout
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
@@ -51,13 +65,6 @@ def logout_user(request):
     
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-##this is fro forgot password 
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -87,7 +94,6 @@ def request_reset_email(request):
     return Response({"message": "Password reset link sent."})
 
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  
 def reset_password(request, uid, token):
@@ -106,13 +112,6 @@ def reset_password(request, uid, token):
     user.set_password(new_password)
     user.save()
     return Response({'message': 'Password reset successful'})
-
-
-
-from .models import menu
-from .serializers import MenuSerializer
-from rest_framework.permissions import IsAuthenticated
-from .permissions import IsCanteenAdmin
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated,IsCanteenAdmin])
@@ -161,7 +160,21 @@ def delete_menu(request, menu_id):
     menu_instance.delete()
     return Response({'message': 'Menu deleted successfully'}, status=204)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def menu_vote_count(request, id):
+    try:
+        menu_obj = menu.objects.get(pk=id)
+    except menu.DoesNotExist:
+        return Response({'error': 'Menu not found'}, status=status.HTTP_404_NOT_FOUND)
 
+    total_votes = Vote.objects.filter(menu=menu_obj).count()
+
+    return Response({
+        'menu_id': menu_obj.id,
+        'menu_date': menu_obj.date,
+        'total_votes': total_votes
+    }, status=status.HTTP_200_OK)
 
 from datetime import datetime, time
 from .models import Vote, menu
@@ -180,57 +193,66 @@ def submit_vote(request):
 
     serializer = VoteSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save(user=user)  # Assign the logged-in user to the vote
+        serializer.save(user=user)  
         return Response({'message': 'Vote submitted successfully.', 'data': serializer.data}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated , IsCanteenAdmin])
+@permission_classes([IsAuthenticated])
 def check_votes(request):
-    # Get date filters from query parameters
-    date = request.GET.get('date')
+    specific_date = request.GET.get('date')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
     try:
-        if date:
-            # Filter by specific date
-            date_obj = datetime.strptime(date, '%Y-%m-%d').date()
-            menu_obj = menu.objects.filter(date=date_obj).first()
-            if not menu_obj:
-                return Response({'error': 'No menu found for that date'}, status=404)
-            votes = Vote.objects.filter(user=request.user, menu=menu_obj)
+        if specific_date:
+            date_obj = datetime.strptime(specific_date, '%Y-%m-%d').date()
+            menus = menu.objects.filter(date=date_obj)
 
         elif start_date and end_date:
-            # Filter by custom date range
             start = datetime.strptime(start_date, '%Y-%m-%d').date()
             end = datetime.strptime(end_date, '%Y-%m-%d').date()
-            menu_objs = menu.objects.filter(date__range=(start, end))
-            votes = Vote.objects.filter(user=request.user, menu__in=menu_objs)
+            menus = menu.objects.filter(date__range=(start, end))
 
         else:
-            # Get all votes by user
-            votes = Vote.objects.filter(user=request.user)
+            today = date.today()
+            menus = menu.objects.filter(date=today)
+        if not menus.exists():
+            return Response({'message': 'No menu found in selected date(s)'}, status=404)
+
+        
+        if request.user.role == 2:  
+            votes = Vote.objects.filter(menu__in=menus)
+        else: 
+            votes = Vote.objects.filter(menu__in=menus, user=request.user)
+
+        serializer = VoteSerializer(votes, many=True)
+
+        
+        vote_summary = {}
+        if request.user.role == 2:
+            for m in menus:
+                vote_summary[m.id] = {
+                    "menu_date": m.date,
+                    "total_votes": votes.filter(menu=m).count()
+                }
+
+        return Response({
+            "votes": serializer.data,
+            "vote_summary": vote_summary if request.user.role == 2 else None
+        }, status=200)
 
     except ValueError:
         return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
-
-    serializer = VoteSerializer(votes, many=True)
-    return Response(serializer.data)
-
-## for export csv and pdf file 
-import pandas as pd
-from django.http import HttpResponse
-from io import BytesIO
-from reportlab.pdfgen import canvas
+    
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_view(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
-    export = request.GET.get('export')  # options: 'csv', 'pdf'
+    export = request.GET.get('export')  
 
     if not from_date or not to_date:
         return Response({'error': 'from and to dates are required. Format: YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
