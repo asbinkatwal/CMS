@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from django.contrib.auth import logout
 from rest_framework.permissions import AllowAny
 from .serializers import RegisterSerializer, LoginSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
@@ -20,6 +21,9 @@ import pandas as pd
 from django.http import HttpResponse
 from io import BytesIO
 from reportlab.pdfgen import canvas
+User = get_user_model()
+
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
@@ -55,26 +59,13 @@ def login_user(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-from django.contrib.auth import logout
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
-    try:
-        # Get the refresh token from the request data
-        refresh_token = request.data["Enter your refresh token"]
-        
-        # Blacklist the refresh token
-        token = RefreshToken(refresh_token)
-        token.blacklist()
-        
-        # Successfully logged out
-        return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
-    
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-User = get_user_model()
+    logout(request)  
+    return Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])  
