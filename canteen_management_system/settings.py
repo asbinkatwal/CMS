@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'canteen' ,
     'rest_framework',
-    'rest_framework_simplejwt.token_blacklist',
+    
     'rest_framework_simplejwt',
     'corsheaders',
 ]
@@ -90,16 +90,16 @@ DATABASES = {
         'PASSWORD': 'Asbin123',
         'HOST': 'localhost',  
         'PORT': '5432',        
-    }
-    # 'postgresql':{
-    #     'ENGINE': 'django.db.backends.postgres',
-    #     'NAME': 'canteen',
-    #     'USER': 'postgres',
-    #     'PASSWORD':'Asbin1234',
-    #     'HOST': 'localhost',
-    #     'PORT': '5432',
-    # }
+ }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+    
 
 
 # Password validation
@@ -171,13 +171,13 @@ AUTH_USER_MODEL = 'canteen.User'
 
 
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'kif22.ak@ismt.edu.np'
-# EMAIL_HOST_PASSWORD = 'Katwal1234!'
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'katwalasbin80@gmail.com'
+EMAIL_HOST_PASSWORD = 'irmn bzuq gawi csza'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 

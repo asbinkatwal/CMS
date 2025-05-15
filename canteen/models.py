@@ -12,6 +12,7 @@ class User(AbstractUser):
     )
     
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, default=EMPLOYEE)
+    email = models.EmailField(unique=True)
 
 
 class menu (models.Model):

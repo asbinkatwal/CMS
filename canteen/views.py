@@ -26,7 +26,15 @@ from reportlab.pdfgen import canvas
 def register_user(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        user = serializer.save()
+        send_mail(
+            subject='Welcome to the Canteen Management System',
+            message=f"Hi {user.username},\n\nThank you for registering! Your account has been successfully created.",
+            from_email='katwalasbin80@gmail.com', 
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        
         return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
