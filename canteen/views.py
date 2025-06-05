@@ -75,7 +75,7 @@ def request_reset_email(request):
     if not users.exists():
         return Response({'error': 'User not found'}, status=404)
 
-    # You can loop through users if duplicates are allowed, but we'll use the first one for now
+   
     user = users.first()
 
     uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -112,14 +112,20 @@ def reset_password(request, uid, token):
     return Response({'message': 'Password reset successful'})
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated,IsCanteenAdmin])
+@permission_classes([IsAuthenticated, IsCanteenAdmin])
 def create_menu(request):
-
     serializer = MenuSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "message": "Menu created successfully",
+            "data": serializer.data
+        }, status=status.HTTP_201_CREATED)
+    
+    return Response({
+        "message": "Menu creation failed",
+        "errors": serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -130,7 +136,8 @@ def list_menus(request):
 
     menus = menu.objects.all()
     serializer = MenuSerializer(menus, many=True)
-    return Response(serializer.data)
+    return Response({"message": "Menus retrieved successfully",
+                     "data": serializer.data})
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated, IsCanteenAdmin])
@@ -145,7 +152,10 @@ def update_menu(request, menu_id):
         serializer.save()
         return Response({'message': 'Menu updated successfully','updateded': serializer.data
         }, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=400)
+    return Response({
+        "message": "upadate manu failed",
+        "errors": serializer.errors
+    }, status=400)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsCanteenAdmin])
