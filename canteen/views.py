@@ -59,8 +59,7 @@ def login_user(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-from django.views.decorators.csrf import csrf_exempt
-@csrf_exempt
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):

@@ -10,7 +10,8 @@ admin.site.register(menu)
 
 class VoteAdmin(admin.ModelAdmin):
     list_display = ('user', 'menu') 
-    list_filter = ('user', 'menu')  # Optional: Add filters for user, menu, and date
+    list_filter = ('user', 'menu')  
+    
     search_fields = ('user__username', 'menu__date')  
 
 admin.site.register(Vote , VoteAdmin)
