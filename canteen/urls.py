@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import register_user, login_user, logout_user , request_reset_email, reset_password, list_menus,create_menu,delete_menu,update_menu , check_votes, submit_vote , report_view, menu_vote_count, check_report_status
+from .views import register_user, login_user, logout_user , request_reset_email, reset_password, list_menus,create_menu,delete_menu,update_menu , check_votes, submit_vote , report_view, menu_vote_count, check_report_status,download_report
 urlpatterns = [
     path('', register_user, name='register'),
     path('login/', login_user, name='login_user'),
@@ -15,4 +15,6 @@ urlpatterns = [
     path('votes/list', check_votes, name='check-votes'),
     path('report/' , report_view, name='report_view'),
     path ('status/', check_report_status, name='report_status'),
+   path('download-report/', download_report, name='download_report')
+
 ]

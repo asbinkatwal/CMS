@@ -1,31 +1,29 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth import logout
-from rest_framework.permissions import AllowAny
-from .serializers import RegisterSerializer, LoginSerializer
+from django.contrib.auth import logout ,get_user_model
+from rest_framework.permissions import AllowAny , IsAuthenticated
+from .serializers import RegisterSerializer, LoginSerializer, MenuSerializer ,VoteSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from rest_framework.permissions import IsAuthenticated
 from canteen.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
-from django.contrib.auth import get_user_model
-from .models import menu
-from .serializers import MenuSerializer
-from rest_framework.permissions import IsAuthenticated
+from datetime import datetime, time , date
+from .models import Vote, menu
 from .permissions import IsCanteenAdmin
-from datetime import datetime, date
 import pandas as pd
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from io import BytesIO
 from reportlab.pdfgen import canvas
 User = get_user_model()
 from .tasks import generate_report_task
 from canteen_management_system.celery import app
 from celery.result import AsyncResult
-from django.http import JsonResponse
+from django.conf import settings
+import os
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
@@ -186,9 +184,6 @@ def menu_vote_count(request, id):
         'total_votes': total_votes
     }, status=status.HTTP_200_OK)
 
-from datetime import datetime, time
-from .models import Vote, menu
-from .serializers import VoteSerializer
 
 VOTING_DEADLINE = time(17, 0)  # 5 PM this is the dedline of that voting  day 
 
@@ -292,3 +287,18 @@ def check_report_status(request):
         'result': result.result if result.successful() else None
     }
     return JsonResponse(response)
+
+
+def download_report(request):
+    file_name = request.GET.get('file_name')
+
+    if not file_name:
+        return JsonResponse({'error': 'Missing "file_name" parameter'}, status=400)
+
+    file_path = os.path.join(settings.MEDIA_ROOT, 'reports', file_name)
+
+    if os.path.exists(file_path):
+        return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)
+    else:
+        raise Http404("Report not found.")
+
