@@ -22,8 +22,10 @@ from django.http import HttpResponse
 from io import BytesIO
 from reportlab.pdfgen import canvas
 User = get_user_model()
-
-
+from .tasks import generate_report_task
+from canteen_management_system.celery import app
+from celery.result import AsyncResult
+from django.http import JsonResponse
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
@@ -256,52 +258,37 @@ def check_votes(request):
     
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([])
 def report_view(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
     export = request.GET.get('export')  
 
     if not from_date or not to_date:
-        return Response({'error': 'from and to dates are required. Format: YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'from and to dates are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        from_date_obj = datetime.strptime(from_date, '%Y-%m-%d').date()
-        to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
-    except ValueError:
-        return Response({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
+    if export not in ['csv', 'pdf']:
+        return Response({'error': 'Invalid export type. Use csv or pdf.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    votes = Vote.objects.filter(voted_at__date__gte=from_date_obj, voted_at__date__lte=to_date_obj)
+   
+    task = generate_report_task.delay(from_date, to_date, export)
 
-    df = pd.DataFrame.from_records(votes.values('voted_at'))
-    if df.empty:
-        return Response({'message': 'No votes found in the given date range.'})
+    return Response({
+        'message': 'Report generation started. Check back later.',
+        'task_id': task.id
+    })
 
-    df['date'] = pd.to_datetime(df['voted_at']).dt.date
-    report = df.groupby('date').size().reset_index(name='vote_count')
+@api_view(['GET'])
+@permission_classes([])
+def check_report_status(request):
+    task_id = request.GET.get('task_id')
+    if not task_id:
+        return JsonResponse({'error': 'task_id is required'}, status=400)
 
-    if export == 'csv':
-        csv_data = report.to_csv(index=False)
-        response = HttpResponse(csv_data, content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="vote_report_{from_date}_to_{to_date}.csv"'
-        return response
-
-    elif export == 'pdf':
-        buffer = BytesIO()
-        p = canvas.Canvas(buffer)
-        p.setFont("Helvetica", 12)
-        p.drawString(50, 800, f"Vote Report from {from_date} to {to_date}")
-
-        y = 770
-        for index, row in report.iterrows():
-            p.drawString(50, y, f"Date: {row['date']}, Votes: {row['vote_count']}")
-            y -= 20
-            if y < 50:
-                p.showPage()
-                y = 800
-
-        p.save()
-        buffer.seek(0)
-        return HttpResponse(buffer, content_type='application/pdf')
-
-    return Response(report.to_dict(orient='records'))
+    result = AsyncResult(task_id, app=app)
+    response = {
+        'task_id': task_id,
+        'status': result.status,  
+        'result': result.result if result.successful() else None
+    }
+    return JsonResponse(response)
