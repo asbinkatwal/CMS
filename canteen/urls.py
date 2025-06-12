@@ -1,4 +1,6 @@
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 from .views import register_user, login_user, logout_user , request_reset_email, reset_password, list_menus,create_menu,delete_menu,update_menu , check_votes, submit_vote , report_view, menu_vote_count, check_report_status,download_report
 urlpatterns = [
     path('', register_user, name='register'),

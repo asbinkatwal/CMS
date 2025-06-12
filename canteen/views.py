@@ -253,7 +253,7 @@ def check_votes(request):
     
 
 @api_view(['GET'])
-@permission_classes([])
+@permission_classes([IsAuthenticated])
 def report_view(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
@@ -274,7 +274,7 @@ def report_view(request):
     })
 
 @api_view(['GET'])
-@permission_classes([])
+@permission_classes([IsAuthenticated])
 def check_report_status(request):
     task_id = request.GET.get('task_id')
     if not task_id:
@@ -284,11 +284,12 @@ def check_report_status(request):
     response = {
         'task_id': task_id,
         'status': result.status,  
-        'result': result.result if result.successful() else None
+        # 'result': result.result if result.successful() else None
     }
     return JsonResponse(response)
 
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def download_report(request):
     file_name = request.GET.get('file_name')
 
@@ -296,6 +297,7 @@ def download_report(request):
         return JsonResponse({'error': 'Missing "file_name" parameter'}, status=400)
 
     file_path = os.path.join(settings.MEDIA_ROOT, 'reports', file_name)
+    
 
     if os.path.exists(file_path):
         return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)

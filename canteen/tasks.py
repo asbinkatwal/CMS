@@ -3,14 +3,13 @@ import pandas as pd
 from .models import Vote
 from io import BytesIO
 from reportlab.pdfgen import canvas
-from django.core.files.base import ContentFile
+from django.conf import settings
+import os
+from datetime import datetime
 
 @shared_task
 def generate_report_task(from_date, to_date, export_type):
-    from datetime import datetime
-    from django.core.files.storage import default_storage
-    from django.conf import settings
-    import os
+    print(">>> Running updated generate_report_task <<<")  # Debug
 
     from_date_obj = datetime.strptime(from_date, '%Y-%m-%d').date()
     to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
@@ -27,7 +26,6 @@ def generate_report_task(from_date, to_date, export_type):
     relative_file_path = f"reports/{file_name}"
     absolute_file_path = os.path.join(settings.MEDIA_ROOT, 'reports', file_name)
 
-    
     os.makedirs(os.path.dirname(absolute_file_path), exist_ok=True)
 
     if export_type == 'csv':
@@ -50,10 +48,12 @@ def generate_report_task(from_date, to_date, export_type):
             f.write(buffer.read())
 
     
-    download_url = f"{settings.MEDIA_URL}reports/{file_name}"
+    download_url = f"/download-report/{file_name}"
+    print(f"Generated download_url: {download_url}") 
+
     return {
         'status': 'success',
         'file_path': relative_file_path,
-        'download_url': download_url  
+        'download_url': download_url
     }
 
