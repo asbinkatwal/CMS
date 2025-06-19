@@ -18,7 +18,7 @@ class RegisterSerializerTest(TestCase):
         self.assertTrue(serializer.is_valid())
         user = serializer.save()
         self.assertEqual(user.username, 'testuser')
-        self.assertNotEqual(user.password, 'pass1234')  # Password should be hashed
+        self.assertNotEqual(user.password, 'pass1234') 
 
     def test_missing_field(self):
         data = {
@@ -79,6 +79,5 @@ class VoteSerializerTest(TestCase):
             "menu": self.menu.id,
             "will_attend": True
         }
-        serializer = VoteSerializer(data=data)
-        serializer.context = {'request': None}  
+        serializer = VoteSerializer(data=data, context={'request': None})   
         self.assertTrue(serializer.is_valid())
