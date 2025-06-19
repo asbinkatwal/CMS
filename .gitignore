@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.pyc
+*.sqlite3
+db.sqlite3
+.env
+*.log
+staticfiles/
+media/
+node_modules/
+*.DS_Stors
+
+.env
+report/
+./reports/*
+media/reports/
