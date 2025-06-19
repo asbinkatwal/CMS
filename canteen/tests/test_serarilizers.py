@@ -80,5 +80,5 @@ class VoteSerializerTest(TestCase):
             "will_attend": True
         }
         serializer = VoteSerializer(data=data)
-        serializer.context = {'request': None}  # Needed if you have request.user override
+        serializer.context = {'request': None}  
         self.assertTrue(serializer.is_valid())
