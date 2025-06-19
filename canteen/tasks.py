@@ -9,7 +9,7 @@ from datetime import datetime
 
 @shared_task
 def generate_report_task(from_date, to_date, export_type):
-    print(">>> Running updated generate_report_task <<<")  # Debug
+    
 
     from_date_obj = datetime.strptime(from_date, '%Y-%m-%d').date()
     to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
@@ -49,7 +49,7 @@ def generate_report_task(from_date, to_date, export_type):
 
     
     download_url = f"/download-report/{file_name}"
-    print(f"Generated download_url: {download_url}") 
+    
 
     return {
         'status': 'success',

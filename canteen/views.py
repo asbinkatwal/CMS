@@ -131,9 +131,6 @@ def create_menu(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsCanteenAdmin])
 def list_menus(request):
-    print("User:", request.user.username)
-    print("User Role:", request.user.role)
-
     menus = menu.objects.all()
     serializer = MenuSerializer(menus, many=True)
     return Response({"message": "Menus retrieved successfully",
