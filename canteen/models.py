@@ -21,7 +21,7 @@ class menu (models.Model):
     max_capacity=models.PositiveIntegerField()
 
     def __str__(self):
-        return f"menu fro {self.date}"
+        return f"menu for {self.date}"
     
 class Vote(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

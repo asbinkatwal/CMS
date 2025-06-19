@@ -56,4 +56,3 @@ def generate_report_task(from_date, to_date, export_type):
         'file_path': relative_file_path,
         'download_url': download_url
     }
-
