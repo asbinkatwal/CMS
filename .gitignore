@@ -12,5 +12,8 @@ node_modules/
 
 .env
 report/
-reports
+reports/
+/reports
 media/reports/
+/canteen
+canteen/
