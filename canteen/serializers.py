@@ -5,10 +5,20 @@ from django.contrib.auth import authenticate
 class RegisterSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
+    address = serializers.JSONField(required=True)
     class Meta:
         model = User
-        fields = ['first_name', 'last_name','username', 'email', 'password', 'role']
+        fields = ['first_name', 'last_name','username', 'email','address', 'password', 'role']
         extra_kwargs = {'password': {'write_only': True}}
+
+    def validate_address(self, value):
+        required_keys = ['street', 'city', 'country', 'zipcode']
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Address must be a dictionary.")
+        for key in required_keys:
+            if key not in value:
+                raise serializers.ValidationError(f"'{key}' is required in address.")
+        return value
 
     def create(self, validated_data):
         user = User.objects.create_user(

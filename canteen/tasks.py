@@ -10,7 +10,6 @@ from datetime import datetime
 @shared_task
 def generate_report_task(from_date, to_date, export_type):
     
-
     from_date_obj = datetime.strptime(from_date, '%Y-%m-%d').date()
     to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
     votes = Vote.objects.filter(voted_at__date__gte=from_date_obj, voted_at__date__lte=to_date_obj)
@@ -25,7 +24,6 @@ def generate_report_task(from_date, to_date, export_type):
     file_name = f"vote_report_{from_date}_to_{to_date}.{export_type}"
     relative_file_path = f"reports/{file_name}"
     absolute_file_path = os.path.join(settings.MEDIA_ROOT, 'reports', file_name)
-
     os.makedirs(os.path.dirname(absolute_file_path), exist_ok=True)
 
     if export_type == 'csv':
@@ -47,10 +45,7 @@ def generate_report_task(from_date, to_date, export_type):
         with open(absolute_file_path, 'wb') as f:
             f.write(buffer.read())
 
-    
     download_url = f"/download-report/{file_name}"
-    
-
     return {
         'status': 'success',
         'file_path': relative_file_path,
