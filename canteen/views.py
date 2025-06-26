@@ -214,7 +214,7 @@ def menu_vote_count(request, id):
         'total_votes': total_votes
     }, status=status.HTTP_200_OK)
 
-VOTING_DEADLINE = time(17, 0)  # 5 PM this is the dedline of that voting  day 
+VOTING_DEADLINE = time(17, 0)  
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit_vote(request):
