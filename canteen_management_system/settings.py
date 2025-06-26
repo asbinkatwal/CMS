@@ -58,7 +58,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
-
+ALLOWED_HOSTS = ['*']
 ROOT_URLCONF = 'canteen_management_system.urls'
 
 TEMPLATES = [

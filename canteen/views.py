@@ -163,7 +163,7 @@ def create_menu(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsCanteenAdminOrSuperUser])
+@permission_classes([IsAuthenticated])
 def list_menus(request):
     menus = menu.objects.all()
     serializer = MenuSerializer(menus, many=True)
