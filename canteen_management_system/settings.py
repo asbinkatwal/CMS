@@ -171,7 +171,7 @@ AUTH_USER_MODEL = 'canteen.User'
 
 
 
-# from decouple import config
+from decouple import config
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = 'smtp.gmail.com'
 # EMAIL_PORT = 587
