@@ -12,7 +12,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from datetime import datetime, time , date
 from .models import Vote, menu
-from .permissions import IsCanteenAdmin , IsSuperUser
+from .permissions import IsCanteenAdmin , IsSuperUser , IsCanteenAdminOrSuperUser
 import pandas as pd
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from io import BytesIO
@@ -147,7 +147,7 @@ def reset_password(request, uid, token):
     return Response({'message': 'Password reset successful'})
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin, IsSuperUser])
+@permission_classes([IsAuthenticated, IsCanteenAdminOrSuperUser])
 def create_menu(request):
     serializer = MenuSerializer(data=request.data)
     if serializer.is_valid():
@@ -163,7 +163,7 @@ def create_menu(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin ,IsSuperUser])
+@permission_classes([IsAuthenticated, IsCanteenAdminOrSuperUser])
 def list_menus(request):
     menus = menu.objects.all()
     serializer = MenuSerializer(menus, many=True)
@@ -171,7 +171,7 @@ def list_menus(request):
                      "data": serializer.data})
 
 @api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin,IsSuperUser])
+@permission_classes([IsAuthenticated,IsCanteenAdminOrSuperUser])
 def update_menu(request, menu_id):
     try:
         menu_instance = menu.objects.get(pk=menu_id)
@@ -189,7 +189,7 @@ def update_menu(request, menu_id):
     }, status=400)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin,IsSuperUser])
+@permission_classes([IsAuthenticated,IsCanteenAdminOrSuperUser])
 def delete_menu(request, menu_id):
     try:
         menu_instance = menu.objects.get(pk=menu_id)
@@ -200,7 +200,7 @@ def delete_menu(request, menu_id):
     return Response({'message': 'Menu deleted successfully'}, status=204)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,IsSuperUser,IsCanteenAdmin])
+@permission_classes([IsAuthenticated,IsCanteenAdminOrSuperUser])
 def menu_vote_count(request, id):
     try:
         menu_obj = menu.objects.get(pk=id)
@@ -230,7 +230,7 @@ def submit_vote(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated , IsCanteenAdmin,IsSuperUser])
+@permission_classes([IsAuthenticated ,IsCanteenAdminOrSuperUser])
 def check_votes(request):
     specific_date = request.GET.get('date')
     start_date = request.GET.get('start_date')
@@ -252,14 +252,14 @@ def check_votes(request):
         if not menus.exists():
             return Response({'message': 'No menu found in selected date(s)'}, status=404)
 
-        if request.user.role == 2:  
+        if request.user.role in [2,3]:  
             votes = Vote.objects.filter(menu__in=menus)
         else: 
             votes = Vote.objects.filter(menu__in=menus, user=request.user)
         serializer = VoteSerializer(votes, many=True)
 
         vote_summary = {}
-        if request.user.role == 2:
+        if request.user.role in [2,3]:
             for m in menus:
                 vote_summary[m.id] = {
                     "menu_date": m.date,
@@ -267,14 +267,14 @@ def check_votes(request):
                 }
         return Response({
             "votes": serializer.data,
-            "vote_summary": vote_summary if request.user.role == 2 else None
+            "vote_summary": vote_summary if request.user.role in [2,3] else None
         }, status=200)
     except ValueError:
         return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
     
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,IsCanteenAdmin,IsSuperUser])
+@permission_classes([IsAuthenticated,IsCanteenAdminOrSuperUser])
 def report_view(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
@@ -293,7 +293,7 @@ def report_view(request):
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,IsCanteenAdmin,IsSuperUser])
+@permission_classes([IsAuthenticated,IsCanteenAdminOrSuperUser])
 def check_report_status(request):
     task_id = request.GET.get('task_id')
     if not task_id:
@@ -307,7 +307,7 @@ def check_report_status(request):
     return JsonResponse(response)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated , IsCanteenAdmin ,IsSuperUser])
+@permission_classes([IsAuthenticated ,IsCanteenAdminOrSuperUser])
 def download_report(request):
     file_name = request.GET.get('file_name')
 
@@ -333,7 +333,7 @@ def dish_order_count_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated,IsCanteenAdmin,IsSuperUser])
+@permission_classes([IsAuthenticated, IsCanteenAdminOrSuperUser])
 def dish_votes_last_6_months(request):
     from_raw = request.GET.get('from')
     to_raw = request.GET.get('to')
