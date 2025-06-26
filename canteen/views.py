@@ -12,7 +12,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from datetime import datetime, time , date
 from .models import Vote, menu
-from .permissions import IsCanteenAdmin
+from .permissions import IsCanteenAdmin , IsSuperUser
 import pandas as pd
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from io import BytesIO
@@ -44,6 +44,45 @@ def register_user(request):
         )
         return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsSuperUser]) 
+def activate_staff_user(request):
+    user_id = request.data.get('user_id')
+    action = request.data.get('action')  
+
+    if not user_id or action not in ['activate', 'deactivate']:
+        return Response(
+            {"error": "user_id and action ('activate' or 'deactivate') are required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+    if action == "activate":
+        user.is_active = True
+        user.is_staff = True
+        msg = "User activated and staff status granted."
+    else:
+        user.is_active = False
+        user.is_staff = False
+        msg = "User deactivated and staff status revoked."
+
+    user.save()
+
+    return Response({
+        "message": msg,
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "is_active": user.is_active,
+            "is_staff": user.is_staff
+        }
+    }, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -108,7 +147,7 @@ def reset_password(request, uid, token):
     return Response({'message': 'Password reset successful'})
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin])
+@permission_classes([IsAuthenticated, IsCanteenAdmin, IsSuperUser])
 def create_menu(request):
     serializer = MenuSerializer(data=request.data)
     if serializer.is_valid():
@@ -124,7 +163,7 @@ def create_menu(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin])
+@permission_classes([IsAuthenticated, IsCanteenAdmin ,IsSuperUser])
 def list_menus(request):
     menus = menu.objects.all()
     serializer = MenuSerializer(menus, many=True)
@@ -132,7 +171,7 @@ def list_menus(request):
                      "data": serializer.data})
 
 @api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin])
+@permission_classes([IsAuthenticated, IsCanteenAdmin,IsSuperUser])
 def update_menu(request, menu_id):
     try:
         menu_instance = menu.objects.get(pk=menu_id)
@@ -150,7 +189,7 @@ def update_menu(request, menu_id):
     }, status=400)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated, IsCanteenAdmin])
+@permission_classes([IsAuthenticated, IsCanteenAdmin,IsSuperUser])
 def delete_menu(request, menu_id):
     try:
         menu_instance = menu.objects.get(pk=menu_id)
@@ -161,7 +200,7 @@ def delete_menu(request, menu_id):
     return Response({'message': 'Menu deleted successfully'}, status=204)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsSuperUser,IsCanteenAdmin])
 def menu_vote_count(request, id):
     try:
         menu_obj = menu.objects.get(pk=id)
@@ -191,7 +230,7 @@ def submit_vote(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated , IsCanteenAdmin,IsSuperUser])
 def check_votes(request):
     specific_date = request.GET.get('date')
     start_date = request.GET.get('start_date')
@@ -235,7 +274,7 @@ def check_votes(request):
     
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsCanteenAdmin,IsSuperUser])
 def report_view(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
@@ -254,7 +293,7 @@ def report_view(request):
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated,IsCanteenAdmin,IsSuperUser])
 def check_report_status(request):
     task_id = request.GET.get('task_id')
     if not task_id:
@@ -268,7 +307,7 @@ def check_report_status(request):
     return JsonResponse(response)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated , IsCanteenAdmin ,IsSuperUser])
 def download_report(request):
     file_name = request.GET.get('file_name')
 
@@ -294,6 +333,7 @@ def dish_order_count_view(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated,IsCanteenAdmin,IsSuperUser])
 def dish_votes_last_6_months(request):
     from_raw = request.GET.get('from')
     to_raw = request.GET.get('to')
