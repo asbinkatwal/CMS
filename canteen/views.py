@@ -331,7 +331,7 @@ def dish_order_count_view(request):
     )
     return Response(list(dish_order_counts))
 
-
+from django.db import connection
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsCanteenAdminOrSuperUser])
 def dish_votes_last_6_months(request):
@@ -345,20 +345,31 @@ def dish_votes_last_6_months(request):
         from_date = today.replace(day=1) - timedelta(days=180)
     if not to_date:
         to_date = date.today()
-    votes = (
-        Vote.objects
-        .filter(menu__date__range=[from_date, to_date])
-        .annotate(month=TruncMonth('menu__date'))
-        .values('month', 'menu__dishes')
-        .annotate(vote_count=Count('id'))
-        .order_by('month', '-vote_count')
-    )
-    formatted_votes = []
-    for v in votes:
-        month_label = v['month'].strftime('%B %Y')
-        formatted_votes.append({
-            'month': month_label,
-            'dish': v['menu__dishes'],
-            'vote_count': v['vote_count']
+
+    query = """
+    SELECT
+        DATE_TRUNC('month', m.date) AS month,
+        m.dishes AS dish,
+        COUNT(v.id) AS vote_count
+    FROM canteen_vote v
+    JOIN canteen_menu m ON v.menu_id = m.id
+    WHERE m.date BETWEEN %s AND %s
+    GROUP BY month, dish
+    ORDER BY month, vote_count DESC;
+"""
+
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, [from_date, to_date])
+        rows = cursor.fetchall()
+
+    # Format result
+    formatted = []
+    for month, dish, count in rows:
+        formatted.append({
+            'month': month.strftime('%B %Y'),
+            'dish': dish,
+            'vote_count': count
         })
-    return Response(formatted_votes)
+
+    return Response(formatted)
