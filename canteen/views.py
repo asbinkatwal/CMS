@@ -28,6 +28,7 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.dateparse import parse_date
+from django.db import connection
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  
@@ -331,7 +332,7 @@ def dish_order_count_view(request):
     )
     return Response(list(dish_order_counts))
 
-from django.db import connection
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsCanteenAdminOrSuperUser])
 def dish_votes_last_6_months(request):
@@ -358,12 +359,10 @@ def dish_votes_last_6_months(request):
     ORDER BY month, vote_count DESC;
 """
 
-
     with connection.cursor() as cursor:
         cursor.execute(query, [from_date, to_date])
         rows = cursor.fetchall()
 
-    # Format result
     formatted = []
     for month, dish, count in rows:
         formatted.append({
